@@ -18,6 +18,10 @@ contract SBT is ERC721 {
         harberger = _harberger;
     }
 
+    function mint(address _to, uint256 _tokenId) external onlyHarberger {
+        _mint(_to, _tokenId);
+    }
+
     function approve(address to, uint256 tokenId) public override onlyHarberger {
         _approve(to, tokenId, _msgSender());
     }
