@@ -21,8 +21,23 @@ contract SBTTest is Test {
         sbt = SBT(_sbt);
     }
 
-    function testApproveRevertsIfNotHarberger() external {
+    function test_ApproveRevertsIfNotHarberger() external {
         vm.expectRevert(SBT_Only_Harberger.selector);
         sbt.approve(address(25), 1);
+    }
+
+    function test_MintRevertsIfNotHarberger() external {
+        vm.expectRevert(SBT_Only_Harberger.selector);
+        sbt.mint(address(25), 1);
+    }
+
+    function test_TransferFromRevertsIfHarberger() external {
+        vm.expectRevert(SBT_Only_Harberger.selector);
+        sbt.transferFrom(address(25), address(26), 1);
+    }
+
+    function test_ApproveAllReverts() external {
+        vm.expectRevert(SBT_Function_Disabled.selector);
+        sbt.setApprovalForAll(address(25), true);
     }
 }
