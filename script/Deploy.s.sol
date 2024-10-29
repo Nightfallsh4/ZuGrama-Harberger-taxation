@@ -17,9 +17,13 @@ contract Deploy is Script {
         vm.stopBroadcast();
     }
 
-    function deploy() public {
+    function deploy() public returns (address _auction, address _harberger, address _sbt) {
         auction = new Auction();
         harberger = new Harberger();
         sbt = new SBT("ZuGrama-1 Assets", "Zu1Assets", address(harberger));
+
+        _auction = address(auction);
+        _harberger = address(harberger);
+        _sbt = address(sbt);
     }
 }
