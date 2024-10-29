@@ -24,6 +24,11 @@ A percentage of that Value they set, will have to be paid as taxes.
 
 ## Getting Started
 
+### Install Dependencies
+```shell
+$ forge install
+```
+
 ### Build
 
 ```shell
