@@ -18,7 +18,8 @@ contract Deploy is Script {
     }
 
     function deploy() public returns (address _auction, address _harberger, address _sbt) {
-        auction = new Auction();
+        address auctioner = vm.envAddress("AUCTIONER_ADDRESS");
+        auction = new Auction(auctioner);
         harberger = new Harberger();
         sbt = new SBT("ZuGrama-1 Assets", "Zu1Assets", address(harberger));
 
