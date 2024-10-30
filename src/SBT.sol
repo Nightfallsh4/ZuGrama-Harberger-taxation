@@ -26,7 +26,19 @@ contract SBT is ERC721 {
         _approve(to, tokenId, _msgSender());
     }
 
-    function setApprovalForAll(address operator, bool approved) public override {
+    function setApprovalForAll(
+        address,
+        /**
+         * operator
+         */
+        bool
+    )
+        /**
+         * approved
+         */
+        public
+        override
+    {
         revert SBT_Function_Disabled();
     }
 
