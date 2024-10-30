@@ -7,7 +7,6 @@ import { Harberger } from "src/Harberger.sol";
 import { SBT } from "src/SBT.sol";
 
 contract Deploy is Script {
-
     struct Config {
         address auctioner;
     }
@@ -34,6 +33,6 @@ contract Deploy is Script {
     }
 
     function getConfig() internal view returns (Config memory) {
-        return Config({auctioner: vm.envAddress("AUCTIONER_ADDRESS")});
+        return Config({ auctioner: vm.envAddress("AUCTIONER_ADDRESS") });
     }
 }

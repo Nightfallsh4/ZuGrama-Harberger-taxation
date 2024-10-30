@@ -9,6 +9,7 @@ contract Auction {
         bool isAsset;
         uint64 auctionStartTime;
         uint64 auctionEndTime;
+        uint64 validTill;
         address currentBidder;
         uint256 currentBid;
         uint256 minBid;
@@ -51,11 +52,32 @@ contract Auction {
             isAsset: true,
             auctionStartTime: 0,
             auctionEndTime: 0,
+            validTill: 0,
             currentBidder: address(0),
             currentBid: 0,
             minBid: _minBid
         });
         emit Auction_AssetSet(_assetAddress, _assetId, _minBid);
+    }
+
+    function startAuctionAndValidity(
+        address _assetAddress,
+        uint256 _assetId,
+        uint256 _auctionDuration,
+        uint256 _assetDuration
+    )
+        external
+        onlyAuctioner
+    {
+        AssetDetails memory assetDetails = assets[_assetAddress][_assetId];
+        if (!assetDetails.isAsset) {
+            revert Auction_NotAsset();
+        }
+        assets[_assetAddress][_assetId].auctionStartTime = uint64(block.timestamp); // timestamp wont exceed uint64
+        assets[_assetAddress][_assetId].auctionEndTime = uint64(block.timestamp + _auctionDuration);
+        assets[_assetAddress][_assetId].validTill = uint64(block.timestamp + _assetDuration);
+
+        emit Auction_Started(_assetAddress, _assetId, block.timestamp + _auctionDuration);
     }
 
     //////////////////////////////

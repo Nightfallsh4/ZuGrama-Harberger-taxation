@@ -40,11 +40,12 @@ contract AuctionTest is Test {
 
     function test_Auction_AssetsSet() external {
         hoax(auctioner, 10 ether);
-        auction.setAssetDetails(address(sbt), 1, 0.0005 ether);
+        auction.setAssetDetails(address(sbt), 1, 1);
 
         Auction.AssetDetails memory assetDetails = auction.getAssetDetails(address(sbt), 1);
 
         assertEq(assetDetails.isAsset, true);
+        assertEq(assetDetails.minBid, 1);
     }
 
     function test_Auction_RevertIfNotAsset() external {
@@ -52,7 +53,14 @@ contract AuctionTest is Test {
         auction.bid(address(sbt), 1, 1 ether);
     }
 
-    // function test_Auction_Revert()  returns () {
+    modifier setAsset() {
+        hoax(auctioner, 10 ether);
+        auction.setAssetDetails(address(sbt), 1, 1);
+        _;
+    }
 
-    // }
+    function test_Auction_RevertIfInvalidTime() external setAsset {
+        vm.expectRevert(Auction_TimeNotValid.selector);
+        auction.bid(address(sbt), 1, 2);
+    }
 }
