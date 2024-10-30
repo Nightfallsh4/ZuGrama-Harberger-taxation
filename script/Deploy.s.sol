@@ -7,6 +7,11 @@ import { Harberger } from "src/Harberger.sol";
 import { SBT } from "src/SBT.sol";
 
 contract Deploy is Script {
+
+    struct Config {
+        address auctioner;
+    }
+
     Auction auction;
     Harberger harberger;
     SBT sbt;
@@ -17,8 +22,8 @@ contract Deploy is Script {
         vm.stopBroadcast();
     }
 
-    function deploy() public returns (address _auction, address _harberger, address _sbt) {
-        address auctioner = vm.envAddress("AUCTIONER_ADDRESS");
+    function deploy() public returns (address _auction, address _harberger, address _sbt, address auctioner) {
+        auctioner = getConfig().auctioner;
         auction = new Auction(auctioner);
         harberger = new Harberger();
         sbt = new SBT("ZuGrama-1 Assets", "Zu1Assets", address(harberger));
@@ -26,5 +31,9 @@ contract Deploy is Script {
         _auction = address(auction);
         _harberger = address(harberger);
         _sbt = address(sbt);
+    }
+
+    function getConfig() internal view returns (Config memory) {
+        return Config({auctioner: vm.envAddress("AUCTIONER_ADDRESS")});
     }
 }

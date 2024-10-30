@@ -9,21 +9,42 @@ import { SBT } from "src/SBT.sol";
 import "src/utils/Errors.sol";
 
 contract AuctionTest is Test {
+    struct AssetDetails {
+        bool isAsset;
+        uint64 auctionStartTime;
+        uint64 auctionEndTime;
+        address currentBidder;
+        uint256 currentBid;
+        uint256 minBid;
+    }
+
     Auction auction;
     Harberger harberger;
     SBT sbt;
 
+    address auctioner;
+
     function setUp() external {
         Deploy deploy = new Deploy();
-        (address _auction, address _harberger, address _sbt) = deploy.deploy();
+        (address _auction, address _harberger, address _sbt, address _auctioner) = deploy.deploy();
         auction = Auction(_auction);
         harberger = Harberger(_harberger);
         sbt = SBT(_sbt);
+        auctioner = _auctioner;
     }
 
     function test_Auction_RevertIfNotAuctioner() external {
         vm.expectRevert(Auction_NotAuctioner.selector);
         auction.setAssetDetails(address(sbt), 1, 1);
+    }
+
+    function test_Auction_AssetsSet() external {
+        hoax(auctioner, 10 ether);
+        auction.setAssetDetails(address(sbt), 1, 0.0005 ether);
+
+        Auction.AssetDetails memory assetDetails = auction.getAssetDetails(address(sbt), 1);
+
+        assertEq(assetDetails.isAsset, true);
     }
 
     function test_Auction_RevertIfNotAsset() external {

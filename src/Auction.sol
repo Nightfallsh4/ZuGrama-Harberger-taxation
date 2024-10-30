@@ -16,7 +16,7 @@ contract Auction {
 
     address immutable auctioner;
 
-    mapping(address asset => mapping(uint256 assetId => AssetDetails details)) public assets;
+    mapping(address asset => mapping(uint256 assetId => AssetDetails details)) private assets;
 
     constructor(address _auctioner) {
         auctioner = _auctioner;
@@ -28,6 +28,10 @@ contract Auction {
         }
         _;
     }
+
+    //////////////////////////////
+    //////// External ////////////
+    //////////////////////////////
 
     function bid(address _asset, uint256 _assetId, uint256 _bidAmount) external {
         AssetDetails memory assetDetails = assets[_asset][_assetId];
@@ -54,6 +58,9 @@ contract Auction {
         emit Auction_AssetSet(_assetAddress, _assetId, _minBid);
     }
 
+    //////////////////////////////
+    //////// Internal ////////////
+    //////////////////////////////
     function checkAssetBidStatus(AssetDetails memory assetDetails) internal view {
         // Checks if Asset is Authorised
         if (!assetDetails.isAsset) {
@@ -74,5 +81,12 @@ contract Auction {
         if (assetDetails.auctionEndTime < block.timestamp) {
             revert Auction_Ended();
         }
+    }
+
+    ////////////////////////////////////////
+    ////////// Getter Functions ////////////
+    ////////////////////////////////////////
+    function getAssetDetails(address _assetAddress, uint256 _assetId) external view returns (AssetDetails memory) {
+        return assets[_assetAddress][_assetId];
     }
 }
