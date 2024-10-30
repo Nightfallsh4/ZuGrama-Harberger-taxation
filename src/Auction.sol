@@ -6,7 +6,6 @@ import "src/utils/Errors.sol";
 contract Auction {
     struct AssetDetails {
         bool isAsset;
-        bool isSold;
         uint64 auctionStartTime;
         uint64 auctionEndTime;
         address currentBidder;
@@ -18,14 +17,18 @@ contract Auction {
 
     function bid(address _asset, uint256 _assetId, uint256 _bidAmount) external {
         AssetDetails memory assetDetails = assets[_asset][_assetId];
-        checkAssetStatus(assetDetails);
+        checkAssetBidStatus(assetDetails);
 
         if (_bidAmount < assetDetails.minBid) {
             revert Auction_LessThanMinBid();
         }
+
+        if (assetDetails.currentBid >= _bidAmount) {
+            revert Auction_BidTooLess();
+        }
     }
 
-    function checkAssetStatus(AssetDetails memory assetDetails) internal view {
+    function checkAssetBidStatus(AssetDetails memory assetDetails) internal view {
         // Checks if Asset is Authorised
         if (!assetDetails.isAsset) {
             revert Auction_NotAsset();

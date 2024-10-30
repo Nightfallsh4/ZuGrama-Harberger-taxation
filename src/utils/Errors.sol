@@ -11,3 +11,4 @@ error Auction_TimeNotValid();
 error Auction_NotStarted();
 error Auction_Ended();
 error Auction_LessThanMinBid();
+error Auction_BidTooLess();
