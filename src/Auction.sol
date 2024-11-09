@@ -3,8 +3,11 @@ pragma solidity 0.8.26;
 
 import "src/utils/Errors.sol";
 import "src/utils/Events.sol";
-
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 contract Auction {
+
+    using SafeERC20 for IERC20;
     struct AssetDetails {
         bool isAsset;
         uint64 auctionStartTime;
@@ -16,11 +19,13 @@ contract Auction {
     }
 
     address immutable auctioner;
+    IERC20 immutable USDC;
 
     mapping(address asset => mapping(uint256 assetId => AssetDetails details)) private assets;
 
-    constructor(address _auctioner) {
+    constructor(address _auctioner, address _usdc) {
         auctioner = _auctioner;
+        USDC = IERC20(_usdc);
     }
 
     modifier onlyAuctioner() {
@@ -45,6 +50,19 @@ contract Auction {
         if (assetDetails.currentBid >= _bidAmount) {
             revert Auction_BidTooLess();
         }
+
+        address previousBidder = assetDetails.currentBidder;
+        uint256 previousAmount = assetDetails.currentBid;
+
+        assetDetails.currentBid = _bidAmount;
+        assetDetails.currentBidder = msg.sender;
+
+        USDC.safeTransfer(previousBidder, previousAmount);
+
+        USDC.safeTransferFrom(msg.sender, address(this), _bidAmount);
+
+        emit Auction_NewBid(msg.sender, _bidAmount);
+        
     }
 
     function setAssetDetails(address _assetAddress, uint256 _assetId, uint256 _minBid) external onlyAuctioner {
