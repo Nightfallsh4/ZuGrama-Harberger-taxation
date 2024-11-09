@@ -13,3 +13,10 @@ error Auction_Ended();
 error Auction_LessThanMinBid();
 error Auction_BidTooLess();
 error Auction_NotAuctioner();
+error Auction_HasntEnded();
+error Auction_NotWinningBidder();
+
+// Harberger Errors
+error Harberger_NotAuction();
+error Harberger_NotAdmin();
+error Harberger_AssetAlreadyExists();

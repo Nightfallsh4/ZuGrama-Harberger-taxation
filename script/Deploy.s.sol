@@ -9,6 +9,7 @@ import { SBT } from "src/SBT.sol";
 contract Deploy is Script {
     struct Config {
         address auctioner;
+        address USDC;
     }
 
     Auction auction;
@@ -22,8 +23,8 @@ contract Deploy is Script {
     }
 
     function deploy() public returns (address _auction, address _harberger, address _sbt, address auctioner) {
-        auctioner = getConfig().auctioner;
-        auction = new Auction(auctioner);
+        Config memory config = getConfig();
+        auction = new Auction(config.auctioner, config.USDC);
         harberger = new Harberger();
         sbt = new SBT("ZuGrama-1 Assets", "Zu1Assets", address(harberger));
 
@@ -33,6 +34,6 @@ contract Deploy is Script {
     }
 
     function getConfig() internal view returns (Config memory) {
-        return Config({ auctioner: vm.envAddress("AUCTIONER_ADDRESS") });
+        return Config({ auctioner: vm.envAddress("AUCTIONER_ADDRESS"), USDC: address(2513) });
     }
 }

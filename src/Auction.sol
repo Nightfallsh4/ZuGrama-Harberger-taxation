@@ -5,9 +5,11 @@ import "src/utils/Errors.sol";
 import "src/utils/Events.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-contract Auction {
+import { Harberger } from "src/Harberger.sol";
 
+contract Auction {
     using SafeERC20 for IERC20;
+
     struct AssetDetails {
         bool isAsset;
         uint64 auctionStartTime;
@@ -22,6 +24,8 @@ contract Auction {
     IERC20 immutable USDC;
 
     mapping(address asset => mapping(uint256 assetId => AssetDetails details)) private assets;
+
+    Harberger harberger;
 
     constructor(address _auctioner, address _usdc) {
         auctioner = _auctioner;
@@ -56,13 +60,27 @@ contract Auction {
 
         assetDetails.currentBid = _bidAmount;
         assetDetails.currentBidder = msg.sender;
+        assets[_asset][_assetId] = assetDetails;
 
+        // @follow-up have to make it calculate the tax and get the entire amount
         USDC.safeTransfer(previousBidder, previousAmount);
 
         USDC.safeTransferFrom(msg.sender, address(this), _bidAmount);
 
         emit Auction_NewBid(msg.sender, _bidAmount);
-        
+    }
+
+    function claim(address _asset, uint256 _assetId, uint256 _initialValue, address _bidder) external {
+        AssetDetails memory assetDetails = assets[_asset][_assetId];
+        checkAssetClaimStatus(assetDetails, _bidder);
+
+        harberger.initialMint(
+            _asset, _assetId, assetDetails.auctionEndTime, assetDetails.validTill, _bidder, _initialValue
+        );
+    }
+
+    function setHarberger(address _harberger) external onlyAuctioner {
+        harberger = Harberger(_harberger);
     }
 
     function setAssetDetails(address _assetAddress, uint256 _assetId, uint256 _minBid) external onlyAuctioner {
@@ -120,6 +138,32 @@ contract Auction {
         // Check if auctionEnd Time is not less than current timestamp, ie Auction hasn't ended yet
         if (assetDetails.auctionEndTime < block.timestamp) {
             revert Auction_Ended();
+        }
+    }
+
+    function checkAssetClaimStatus(AssetDetails memory assetDetails, address _bidder) internal view {
+        // Checks if Asset is Authorised
+        if (!assetDetails.isAsset) {
+            revert Auction_NotAsset();
+        }
+
+        // Check if autionEndTime and auctionStartTime aren't zero, which mean the aution time isn't set yet
+        if (assetDetails.auctionEndTime == 0 || assetDetails.auctionStartTime == 0) {
+            revert Auction_TimeNotValid();
+        }
+
+        // Check if autionStartTime is not greater than current timestamp, ie Auction not started yet
+        if (assetDetails.auctionStartTime > block.timestamp) {
+            revert Auction_NotStarted();
+        }
+
+        // Check if auctionEnd Time is less than current timestamp, ie Auction has ended yet
+        if (assetDetails.auctionEndTime > block.timestamp) {
+            revert Auction_HasntEnded();
+        }
+
+        if (_bidder != assetDetails.currentBidder) {
+            revert Auction_NotWinningBidder();
         }
     }
 
