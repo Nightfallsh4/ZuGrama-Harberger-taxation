@@ -26,11 +26,11 @@ contract AuctionTest is Test {
 
     function setUp() external {
         Deploy deploy = new Deploy();
-        (address _auction, address _harberger, address _sbt, address _auctioner) = deploy.deploy();
+        (address _auction, address _harberger, address _sbt, Deploy.Config memory config) = deploy.deploy();
         auction = Auction(_auction);
         harberger = Harberger(_harberger);
         sbt = SBT(_sbt);
-        auctioner = _auctioner;
+        auctioner = config.auctioner;
     }
 
     function test_Auction_RevertIfNotAuctioner() external {

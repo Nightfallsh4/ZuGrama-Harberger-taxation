@@ -10,6 +10,7 @@ contract Deploy is Script {
     struct Config {
         address auctioner;
         address USDC;
+        address admin;
     }
 
     Auction auction;
@@ -22,10 +23,10 @@ contract Deploy is Script {
         vm.stopBroadcast();
     }
 
-    function deploy() public returns (address _auction, address _harberger, address _sbt, address auctioner) {
-        Config memory config = getConfig();
+    function deploy() public returns (address _auction, address _harberger, address _sbt, Config memory config) {
+        config = getConfig();
         auction = new Auction(config.auctioner, config.USDC);
-        harberger = new Harberger();
+        harberger = new Harberger(config.admin, address(auction), config.USDC);
         sbt = new SBT("ZuGrama-1 Assets", "Zu1Assets", address(harberger));
 
         _auction = address(auction);
@@ -34,6 +35,10 @@ contract Deploy is Script {
     }
 
     function getConfig() internal view returns (Config memory) {
-        return Config({ auctioner: vm.envAddress("AUCTIONER_ADDRESS"), USDC: address(2513) });
+        return Config({
+            auctioner: vm.envAddress("AUCTIONER_ADDRESS"),
+            USDC: address(2513),
+            admin: vm.envAddress("ADMIN_ADDRESS")
+        });
     }
 }
