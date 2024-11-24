@@ -22,6 +22,8 @@ A percentage of that Value they set, will have to be paid as taxes.
 - Harberger Contract works to set the value of the Asset by its current owner, and for buyers to snip it from users. Also used to mint assets after the auction is complete and to calculate and pay the harberger tax. Its also responsible for transferring ownership once the buyer buys out the asset from the current owner.
 - SBT contract is the Soulbound Token used to track the current owner
 
+![Architecture](assets/Architecture.png)
+
 ## Getting Started
 
 ### Install Dependencies

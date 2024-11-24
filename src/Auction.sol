@@ -173,4 +173,6 @@ contract Auction {
     function getAssetDetails(address _assetAddress, uint256 _assetId) external view returns (AssetDetails memory) {
         return assets[_assetAddress][_assetId];
     }
+
+    // @follow-up make withdraw function
 }
