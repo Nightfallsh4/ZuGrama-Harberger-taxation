@@ -11,16 +11,17 @@ contract Harberger {
     using SafeERC20 for IERC20;
 
     struct HarbergerDetails {
-        uint256 currentValue;
+        uint256 value;
         uint64 validFrom;
         uint64 validTill;
+        uint64 updatedAt;
     }
 
     address public immutable auction;
     address public immutable admin;
     IERC20 immutable USDC;
 
-    uint256 public taxRate; //Tax Rate per second. ie USD per second of owning the asset
+    uint256 public taxRate; //Tax Rate. Is in 6 decimals. Where 100% = 1000000
 
     mapping(address asset => mapping(uint256 assetId => HarbergerDetails)) private assetToHarberger;
 
@@ -62,24 +63,54 @@ contract Harberger {
         }
 
         harbergerDetails.validFrom = _validFrom;
+        harbergerDetails.updatedAt = _validFrom; // Conversion to uint64 not risky since time will not exceed uint64
         harbergerDetails.validTill = _validTill;
-        harbergerDetails.currentValue = _initialValue;
+        harbergerDetails.value = _initialValue;
         assetToHarberger[_asset][_assetId] = harbergerDetails;
 
         uint256 tax = getTotalTaxForValue(_initialValue);
-
-        // USDC.safeTransferFrom(_bidder) @follow-up have to calculate the entire tax owed and move it here
+        // @follow-up initial Value Can be winning Bid??
+        USDC.safeTransferFrom(auction, address(this), tax + _initialValue); //@follow-up have to calculate the entire
+            // tax owed and move it here
 
         SBT(_asset).mint(_bidder, _assetId);
     }
 
+    function startBuyout(address _asset, uint256 _assetId) external { }
+
+    function completeBuyOut(address _asset, uint256 _assetId) external { }
+
+    function matchBuyOut(address _asset, uint256 _assetId) external { }
+
     function setTaxRate(uint256 _taxRate) external onlyAdmin {
+        if (_taxRate > 1_000_000) {
+            revert Harberger_CantExceed100Percent();
+        }
         taxRate = _taxRate;
     }
 
-    function getTotalTaxForValue(uint256 _value) public returns (uint256 tax) {
+    function getTotalTaxForValue(uint256 _value) public view returns (uint256 tax) {
         //@follow-up work on this
-        tax = _value * taxRate;
+        tax = (_value * taxRate) / 1_000_000; // Value is USD i.e 6 decimals and taxRate is also 6 decimals
+    }
+
+    function getTaxOwedTillNow(address _asset, uint256 _assetId) public view returns (uint256 taxOwed) {
+        HarbergerDetails memory harbergerDetails = getHarbegerDetails(_asset, _assetId);
+
+        // tax Owed till now = totalTaxForPeriod * (currentTime / totalTimePeriod)
+        uint256 totalTax = getTotalTaxForValue(harbergerDetails.value);
+
+        uint64 timePeriod = harbergerDetails.validTill - harbergerDetails.updatedAt;
+        taxOwed = (uint64(block.timestamp) * totalTax) / timePeriod;
+    }
+
+    function getCurrentValueOfAsset(address _asset, uint256 _assetId) public view returns (uint256 currentValue) {
+        HarbergerDetails memory harbergerDetails = getHarbegerDetails(_asset, _assetId);
+
+        // Current Value of assets is function of the time period. Value decrease linearly with time
+        // Current Value of asset = (currentTime / totalTimePeriod ) * initialValue
+        uint64 timePeriod = harbergerDetails.validTill - harbergerDetails.updatedAt;
+        currentValue = (uint64(block.timestamp) * harbergerDetails.value) / timePeriod;
     }
 
     function getHarbegerDetails(address _asset, uint256 _assetId) public view returns (HarbergerDetails memory) {

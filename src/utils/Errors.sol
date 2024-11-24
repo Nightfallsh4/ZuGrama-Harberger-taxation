@@ -20,3 +20,4 @@ error Auction_NotWinningBidder();
 error Harberger_NotAuction();
 error Harberger_NotAdmin();
 error Harberger_AssetAlreadyExists();
+error Harberger_CantExceed100Percent();
