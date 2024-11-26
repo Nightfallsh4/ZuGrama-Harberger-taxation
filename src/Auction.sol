@@ -89,7 +89,7 @@ contract Auction {
         USDC.approve(address(harberger), assetDetails.currentBid + assetDetails.currentTotalTax);
 
         harberger.initialMint(
-            _asset, _assetId, assetDetails.auctionEndTime, assetDetails.validTill, _bidder, _initialValue
+            _asset, _assetId, assetDetails.auctionEndTime, assetDetails.validTill, _bidder, assetDetails.currentBid,_initialValue
         );
     }
 

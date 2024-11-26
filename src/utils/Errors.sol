@@ -21,3 +21,5 @@ error Harberger_NotAuction();
 error Harberger_NotAdmin();
 error Harberger_AssetAlreadyExists();
 error Harberger_CantExceed100Percent();
+error Harberger_AssetDoesntExists();
+error Harberger_BuyoutBidTooLow();

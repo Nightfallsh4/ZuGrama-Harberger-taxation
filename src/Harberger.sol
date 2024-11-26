@@ -15,6 +15,9 @@ contract Harberger {
         uint64 validFrom;
         uint64 validTill;
         uint64 updatedAt;
+        uint64 buyoutInitiationTime;
+        address buyoutBidder;
+        uint256 buyoutAmount;
     }
 
     address public immutable auction;
@@ -51,6 +54,7 @@ contract Harberger {
         uint64 _validFrom,
         uint64 _validTill,
         address _bidder,
+        uint256 _winningBidAmout,
         uint256 _initialValue
     )
         external
@@ -63,20 +67,47 @@ contract Harberger {
         }
 
         harbergerDetails.validFrom = _validFrom;
-        harbergerDetails.updatedAt = _validFrom; // Conversion to uint64 not risky since time will not exceed uint64
+        harbergerDetails.updatedAt = _validFrom;
         harbergerDetails.validTill = _validTill;
         harbergerDetails.value = _initialValue;
         assetToHarberger[_asset][_assetId] = harbergerDetails;
 
         uint256 tax = getTotalTaxForValue(_initialValue);
-        // @follow-up initial Value Can be winning Bid??
-        USDC.safeTransferFrom(auction, address(this), tax + _initialValue); //@follow-up have to calculate the entire
-            // tax owed and move it here
+        
+        USDC.safeTransferFrom(auction, address(this), tax + _winningBidAmout); 
 
         SBT(_asset).mint(_bidder, _assetId);
     }
 
-    function startBuyout(address _asset, uint256 _assetId) external { }
+    function startBuyout(address _asset, uint256 _assetId, uint256 _buyoutAmount) external {
+        HarbergerDetails memory harbergerDetails = getHarbegerDetails(_asset,_assetId);
+
+        if (harbergerDetails.validFrom == 0) {
+            revert Harberger_AssetDoesntExists();
+        }
+
+        // If the buyoutAmount is less than or equal to an existing bid then revert
+        if (harbergerDetails.buyoutAmount > 0 && _buyoutAmount < harbergerDetails.buyoutAmount) {
+            revert Harberger_BuyoutBidTooLow();
+        }
+        // @follow-up If a buyout amount is already present send it back to the previous bidder
+        if (harbergerDetails.buyoutAmount > 0 && harbergerDetails.buyoutBidder != address(0)) {
+            // If There is a buyout bid already then return that
+             
+            uint256 previousBuyoutTax = getTotalTaxForValue(harbergerDetails.buyoutAmount);
+            USDC.safeTransfer(harbergerDetails.buyoutBidder, harbergerDetails.buyoutAmount + previousBuyoutTax);
+        }
+        harbergerDetails.buyoutAmount = _buyoutAmount;
+        harbergerDetails.buyoutBidder = msg.sender;
+        harbergerDetails.buyoutInitiationTime = uint64(block.timestamp);
+        assetToHarberger[_asset][_assetId] = harbergerDetails;
+
+        uint256 tax = getTotalTaxForValue(_buyoutAmount);
+        
+        USDC.safeTransferFrom(msg.sender, address(this), tax + _buyoutAmount);
+
+        emit Harberger_Buyout_Initiated(_asset, _assetId, msg.sender, _buyoutAmount);
+    }
 
     function completeBuyOut(address _asset, uint256 _assetId) external { }
 
