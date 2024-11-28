@@ -92,7 +92,7 @@ contract Harberger {
         if (harbergerDetails.buyoutAmount > 0 && _buyoutAmount < harbergerDetails.buyoutAmount) {
             revert Harberger_BuyoutBidTooLow();
         }
-        
+
         uint256 currentValue = getCurrentValueOfAsset(_asset, _assetId);
         if (currentValue > _buyoutAmount) {
             revert Harberger_BuyoutBidTooLow();
@@ -104,7 +104,7 @@ contract Harberger {
             uint256 previousBuyoutTax = getTotalTaxForValue(harbergerDetails.buyoutAssetValue);
             USDC.safeTransfer(harbergerDetails.buyoutBidder, harbergerDetails.buyoutAmount + previousBuyoutTax);
         }
-        
+
         harbergerDetails.buyoutAmount = _buyoutAmount;
         harbergerDetails.buyoutBidder = msg.sender;
         harbergerDetails.buyoutInitiationTime = uint64(block.timestamp);
@@ -124,7 +124,7 @@ contract Harberger {
         if (harbergerDetails.validFrom == 0) {
             revert Harberger_AssetDoesntExists();
         }
-        if ( harbergerDetails.validTill < block.timestamp) {
+        if (harbergerDetails.validTill < block.timestamp) {
             revert Harberger_AssetAlreadyExpired();
         }
         if (
@@ -146,10 +146,9 @@ contract Harberger {
         harbergerDetails.value = newAssetValue;
         harbergerDetails.updatedAt = uint64(block.timestamp);
         assetToHarberger[_asset][_assetId] = harbergerDetails;
-        
+
         USDC.safeTransfer(currentOwner, previousValue);
         SBT(_asset).transferFrom(currentOwner, bidder, _assetId);
-
     }
 
     // function matchBuyOut(address _asset, uint256 _assetId) external { }
@@ -161,8 +160,8 @@ contract Harberger {
         taxRate = _taxRate;
     }
 
-    function retrieveFunds(address _token, uint256 _amount, address _to) external onlyAdmin   {
-        IERC20(_token).transfer(_to,_amount);
+    function retrieveFunds(address _token, uint256 _amount, address _to) external onlyAdmin {
+        IERC20(_token).transfer(_to, _amount);
     }
 
     function getTotalTaxForValue(uint256 _value) public view returns (uint256 tax) {
