@@ -136,14 +136,17 @@ contract Harberger {
 
         uint256 previousValue = harbergerDetails.value;
         address bidder = harbergerDetails.buyoutBidder;
+        uint256 newAssetValue = harbergerDetails.buyoutAssetValue;
 
+        address currentOwner = SBT(_asset).ownerOf(_assetId);
         harbergerDetails.buyoutAmount = 0;
         harbergerDetails.buyoutBidder = address(0);
         harbergerDetails.buyoutInitiationTime = 0;
-        // harbergerDetails.value = ;// @follow-up make current value be set from previous 
-        // harbge
+        harbergerDetails.buyoutAssetValue = 0;
+        harbergerDetails.value = newAssetValue;
+        harbergerDetails.updatedAt = uint64(block.timestamp);
+        assetToHarberger[_asset][_assetId] = harbergerDetails;
         
-        address currentOwner = SBT(_asset).ownerOf(_assetId);
         USDC.safeTransfer(currentOwner, previousValue);
         SBT(_asset).transferFrom(currentOwner, bidder, _assetId);
 
@@ -156,6 +159,10 @@ contract Harberger {
             revert Harberger_CantExceed100Percent();
         }
         taxRate = _taxRate;
+    }
+
+    function retrieveFunds(address _token, uint256 _amount, address _to) external onlyAdmin   {
+        IERC20(_token).transfer(_to,_amount);
     }
 
     function getTotalTaxForValue(uint256 _value) public view returns (uint256 tax) {
