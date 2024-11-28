@@ -18,6 +18,7 @@ contract Harberger {
         uint64 buyoutInitiationTime;
         address buyoutBidder;
         uint256 buyoutAmount;
+        uint256 buyoutAssetValue;
     }
 
     address public immutable auction;
@@ -25,6 +26,7 @@ contract Harberger {
     IERC20 immutable USDC;
 
     uint256 public taxRate; //Tax Rate. Is in 6 decimals. Where 100% = 1000000
+    uint256 public excessEarnings;
 
     mapping(address asset => mapping(uint256 assetId => HarbergerDetails)) private assetToHarberger;
 
@@ -73,14 +75,14 @@ contract Harberger {
         assetToHarberger[_asset][_assetId] = harbergerDetails;
 
         uint256 tax = getTotalTaxForValue(_initialValue);
-        
-        USDC.safeTransferFrom(auction, address(this), tax + _winningBidAmout); 
+
+        USDC.safeTransferFrom(auction, address(this), tax + _winningBidAmout);
 
         SBT(_asset).mint(_bidder, _assetId);
     }
 
-    function startBuyout(address _asset, uint256 _assetId, uint256 _buyoutAmount) external {
-        HarbergerDetails memory harbergerDetails = getHarbegerDetails(_asset,_assetId);
+    function startBuyout(address _asset, uint256 _assetId, uint256 _buyoutAmount, uint256 _assetValue) external {
+        HarbergerDetails memory harbergerDetails = getHarbegerDetails(_asset, _assetId);
 
         if (harbergerDetails.validFrom == 0) {
             revert Harberger_AssetDoesntExists();
@@ -90,28 +92,64 @@ contract Harberger {
         if (harbergerDetails.buyoutAmount > 0 && _buyoutAmount < harbergerDetails.buyoutAmount) {
             revert Harberger_BuyoutBidTooLow();
         }
-        // @follow-up If a buyout amount is already present send it back to the previous bidder
+        
+        uint256 currentValue = getCurrentValueOfAsset(_asset, _assetId);
+        if (currentValue > _buyoutAmount) {
+            revert Harberger_BuyoutBidTooLow();
+        }
+
         if (harbergerDetails.buyoutAmount > 0 && harbergerDetails.buyoutBidder != address(0)) {
             // If There is a buyout bid already then return that
-             
-            uint256 previousBuyoutTax = getTotalTaxForValue(harbergerDetails.buyoutAmount);
+
+            uint256 previousBuyoutTax = getTotalTaxForValue(harbergerDetails.buyoutAssetValue);
             USDC.safeTransfer(harbergerDetails.buyoutBidder, harbergerDetails.buyoutAmount + previousBuyoutTax);
         }
+        
         harbergerDetails.buyoutAmount = _buyoutAmount;
         harbergerDetails.buyoutBidder = msg.sender;
         harbergerDetails.buyoutInitiationTime = uint64(block.timestamp);
+        harbergerDetails.buyoutAssetValue = _assetValue;
         assetToHarberger[_asset][_assetId] = harbergerDetails;
 
-        uint256 tax = getTotalTaxForValue(_buyoutAmount);
-        
+        uint256 tax = getTotalTaxForValue(_assetValue);
+
         USDC.safeTransferFrom(msg.sender, address(this), tax + _buyoutAmount);
 
         emit Harberger_Buyout_Initiated(_asset, _assetId, msg.sender, _buyoutAmount);
     }
 
-    function completeBuyOut(address _asset, uint256 _assetId) external { }
+    function completeBuyOut(address _asset, uint256 _assetId) external {
+        HarbergerDetails memory harbergerDetails = getHarbegerDetails(_asset, _assetId);
 
-    function matchBuyOut(address _asset, uint256 _assetId) external { }
+        if (harbergerDetails.validFrom == 0) {
+            revert Harberger_AssetDoesntExists();
+        }
+        if ( harbergerDetails.validTill < block.timestamp) {
+            revert Harberger_AssetAlreadyExpired();
+        }
+        if (
+            harbergerDetails.buyoutInitiationTime != 0
+                && harbergerDetails.buyoutInitiationTime + 1 days >= uint64(block.timestamp)
+        ) {
+            revert Harberger_TimelockNotEnded();
+        }
+
+        uint256 previousValue = harbergerDetails.value;
+        address bidder = harbergerDetails.buyoutBidder;
+
+        harbergerDetails.buyoutAmount = 0;
+        harbergerDetails.buyoutBidder = address(0);
+        harbergerDetails.buyoutInitiationTime = 0;
+        // harbergerDetails.value = ;// @follow-up make current value be set from previous 
+        // harbge
+        
+        address currentOwner = SBT(_asset).ownerOf(_assetId);
+        USDC.safeTransfer(currentOwner, previousValue);
+        SBT(_asset).transferFrom(currentOwner, bidder, _assetId);
+
+    }
+
+    // function matchBuyOut(address _asset, uint256 _assetId) external { }
 
     function setTaxRate(uint256 _taxRate) external onlyAdmin {
         if (_taxRate > 1_000_000) {
@@ -121,7 +159,6 @@ contract Harberger {
     }
 
     function getTotalTaxForValue(uint256 _value) public view returns (uint256 tax) {
-        //@follow-up work on this
         tax = (_value * taxRate) / 1_000_000; // Value is USD i.e 6 decimals and taxRate is also 6 decimals
     }
 

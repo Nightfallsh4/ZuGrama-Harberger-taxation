@@ -8,5 +8,6 @@ event Auction_Started(address indexed assetAddress, uint256 indexed assetId, uin
 
 event Auction_NewBid(address indexed bidder, uint256 indexed amount);
 
-
-event Harberger_Buyout_Initiated(address indexed assetAddress, uint256 indexed assetId, address indexed bidder, uint256 bidAmount );
+event Harberger_Buyout_Initiated(
+    address indexed assetAddress, uint256 indexed assetId, address indexed bidder, uint256 bidAmount
+);
