@@ -182,7 +182,8 @@ contract Harberger {
         HarbergerDetails memory harbergerDetails = getHarbegerDetails(_asset, _assetId);
 
         // Current Value of assets is function of the time period. Value decrease linearly with time
-        // Current Value of asset = (currentTime / totalTimePeriod ) * initialValue
+        // Current Value of asset = (currentTime / totalTimePeriod ) * initialValue @follow-up fix it with (100 -
+        // percent) * value
         uint64 timePeriod = harbergerDetails.validTill - harbergerDetails.updatedAt;
         currentValue = (uint64(block.timestamp) * harbergerDetails.value) / timePeriod;
     }
