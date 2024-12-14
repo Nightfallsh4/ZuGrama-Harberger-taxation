@@ -185,7 +185,8 @@ contract Harberger {
         // Current Value of asset = (currentTime / totalTimePeriod ) * initialValue @follow-up fix it with (100 -
         // percent) * value
         uint64 timePeriod = harbergerDetails.validTill - harbergerDetails.updatedAt;
-        currentValue = (uint64(block.timestamp) * harbergerDetails.value) / timePeriod;
+        uint64 currentTime = timePeriod - (uint64(block.timestamp) - harbergerDetails.updatedAt);
+        currentValue = ((timePeriod - currentTime) * harbergerDetails.value) / timePeriod;
     }
 
     function getHarbegerDetails(address _asset, uint256 _assetId) public view returns (HarbergerDetails memory) {

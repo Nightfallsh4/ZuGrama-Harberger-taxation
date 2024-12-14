@@ -11,6 +11,12 @@ contract SBTFactory {
         harberger = _harberger;
     }
 
+    /**
+     * @dev Used to create a Harberger SBT Asset 
+     * @param _name Name of the asset
+     * @param _symbol Symbol of the asset
+     * @param _initialOwner Initial Owner of the asset
+     */
     function createSbtAsset(
         string memory _name,
         string memory _symbol,
