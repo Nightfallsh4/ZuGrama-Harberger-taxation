@@ -120,6 +120,23 @@ contract HarbergerTest is Test {
         initialMint();
 
         skip(QUARTER_ASSET_VALIDITY);
-        uint256 currentValue = harberger.getCurrentValueOfAsset(address(sbt), tokenId);
+        uint256 quarterValue = harberger.getCurrentValueOfAsset(address(sbt), tokenId);
+
+        uint256 expectedQuarterValue = (TWENTY_USDC * (ASSET_VALIDITY - QUARTER_ASSET_VALIDITY)) / (ASSET_VALIDITY); // value = initialValue * (remainingTime / totalTime)
+        assertEq(quarterValue, expectedQuarterValue);
+
+        skip(HALF_ASSET_VALIDITY);
+        uint256 threeQuaterValue = harberger.getCurrentValueOfAsset(address(sbt), tokenId);
+
+        uint256 expectedThreeQuarterValue = (TWENTY_USDC * (ASSET_VALIDITY - (QUARTER_ASSET_VALIDITY + HALF_ASSET_VALIDITY))) / (ASSET_VALIDITY); // value = initialValue * (remainingTime / totalTime)
+        assertEq(threeQuaterValue, expectedThreeQuarterValue);
+        
+        skip(QUARTER_ASSET_VALIDITY);
+        uint256 finalValue = harberger.getCurrentValueOfAsset(address(sbt), tokenId);
+
+        uint256 expectedFinalValue = 0; // value = initialValue * (remainingTime / totalTime)
+        assertEq(finalValue, expectedFinalValue);
+        
+
     }
 }
