@@ -93,7 +93,7 @@ contract HarbergerTest is Test {
         Harberger.HarbergerDetails memory harbergerDetails = harberger.getHarbegerDetails(address(sbt), tokenId);
         assertEq(harbergerDetails.validFrom, expectedValidFrom);
         assertEq(harbergerDetails.updatedAt, expectedValidFrom);
-        assertEq(harbergerDetails.validTill, auctionStartedTime + ASSET_VALIDITY);
+        assertEq(harbergerDetails.validTill, auctionStartedTime + ASSET_VALIDITY + AUCTION_DURATION);
         assertEq(harbergerDetails.value, TWENTY_USDC);
 
         assertEq(USDC.balanceOf(address(harberger)), TEN_USDC + (2 * ONE_USDC));
@@ -218,6 +218,9 @@ contract HarbergerTest is Test {
     }
 
     function startBuyout()  internal {
+
+        
+        skip(QUARTER_ASSET_VALIDITY);
         uint256 quarterAssetValue = harberger.getCurrentValueOfAsset(address(sbt), tokenId);
         
         uint256 newValue = quarterAssetValue + TEN_USDC;
@@ -237,17 +240,33 @@ contract HarbergerTest is Test {
         initialMint();
         startBuyout();
 
+        skip(ONE_DAY);
+        uint256 user1PriorBalance = USDC.balanceOf(user1);
         Harberger.HarbergerDetails memory harbergerDetails = harberger.getHarbegerDetails(address(sbt), tokenId);
 
-        uint256 user1PriorBalance = USDC.balanceOf(user1);
+        // uint256 taxOwedTillNow = harberger.getTaxOwedTillNow(address(sbt), tokenId);
+        // uint256 totalPriorTax = harberger.getTotalTaxForValue(harbergerDetails.value);
 
-        skip(ONE_DAY);
+
         harberger.completeBuyOut(address(sbt), tokenId);
+
 
         uint256 user1PostBalance = USDC.balanceOf(user1);
 
-        assertEq(user1PostBalance, user1PriorBalance + harbergerDetails.buyoutAmount);
+        // uint256 remainingTax = totalPriorTax - taxOwedTillNow;
+
+        assertEq(user1PostBalance, user1PriorBalance + harbergerDetails.buyoutAmount + harbergerDetails.taxToBeReturned);
+        // 109_500_000    
+        // 106_500_000
+
+
+        // User 1                   Harberger       Value       TAX OWED        TAX Rem
+        // Mint         100
+        // Auction      88          12              20          0               2
+        // Quarter      88          12              20          0.5             1.5
+        // comBuy       109.5       15              30          0.5             3
+        // @follow-up The one day gap in the timelock to completeBuyout gives time for 
         assertEq(sbt.ownerOf(tokenId), user2);
-        
+
     }
 }

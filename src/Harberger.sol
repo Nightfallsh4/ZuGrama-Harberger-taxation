@@ -19,6 +19,7 @@ contract Harberger {
         address buyoutBidder;
         uint256 buyoutAmount;
         uint256 buyoutAssetValue;
+        uint256 taxToBeReturned;
     }
 
     address public immutable auction;
@@ -104,14 +105,19 @@ contract Harberger {
             uint256 previousBuyoutTax = getTotalTaxForValue(harbergerDetails.buyoutAssetValue);
             USDC.safeTransfer(harbergerDetails.buyoutBidder, harbergerDetails.buyoutAmount + previousBuyoutTax);
         }
-
+        
+        uint256 tax = getTotalTaxForValue(_assetValue);
+        uint256 priorTax = getTotalTaxForValue(harbergerDetails.value);
+        uint256 taxOwedTillNow = getTaxOwedTillNow(_asset, _assetId);
+        uint256 taxToReimburse = priorTax - taxOwedTillNow;
+        
         harbergerDetails.buyoutAmount = _buyoutAmount;
         harbergerDetails.buyoutBidder = msg.sender;
         harbergerDetails.buyoutInitiationTime = uint64(block.timestamp);
         harbergerDetails.buyoutAssetValue = _assetValue;
+        harbergerDetails.taxToBeReturned = taxToReimburse;
         assetToHarberger[_asset][_assetId] = harbergerDetails;
 
-        uint256 tax = getTotalTaxForValue(_assetValue);
 
         USDC.safeTransferFrom(msg.sender, address(this), tax + _buyoutAmount);
 
@@ -135,20 +141,23 @@ contract Harberger {
             revert Harberger_TimelockNotEnded();
         }
 
-        uint256 previousValue = harbergerDetails.value;
+        uint256 buyoutAmount = harbergerDetails.buyoutAmount;
         address bidder = harbergerDetails.buyoutBidder;
         uint256 newAssetValue = harbergerDetails.buyoutAssetValue;
-
+        uint256 taxToReturn = harbergerDetails.taxToBeReturned;
         address currentOwner = SBT(_asset).ownerOf(_assetId);
+        
+
         harbergerDetails.buyoutAmount = 0;
         harbergerDetails.buyoutBidder = address(0);
         harbergerDetails.buyoutInitiationTime = 0;
         harbergerDetails.buyoutAssetValue = 0;
         harbergerDetails.value = newAssetValue;
         harbergerDetails.updatedAt = uint64(block.timestamp);
+        harbergerDetails.taxToBeReturned = 0;
         assetToHarberger[_asset][_assetId] = harbergerDetails;
 
-        USDC.safeTransfer(currentOwner, previousValue);
+        USDC.safeTransfer(currentOwner, buyoutAmount + taxToReturn);
         SBT(_asset).transferFrom(currentOwner, bidder, _assetId);
     }
 
@@ -174,9 +183,10 @@ contract Harberger {
 
         // tax Owed till now = totalTaxForPeriod * (currentTime / totalTimePeriod)
         uint256 totalTax = getTotalTaxForValue(harbergerDetails.value);
-
+        
         uint64 timePeriod = harbergerDetails.validTill - harbergerDetails.updatedAt;
-        taxOwed = (uint64(block.timestamp) * totalTax) / timePeriod;
+        uint64 timePassed = uint64(block.timestamp) - harbergerDetails.updatedAt;
+        taxOwed = (totalTax * timePassed) / timePeriod;
     }
 
     function getCurrentValueOfAsset(address _asset, uint256 _assetId) public view returns (uint256 currentValue) {
