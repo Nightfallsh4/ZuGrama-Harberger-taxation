@@ -6,6 +6,7 @@ import { Deploy } from "script/Deploy.s.sol";
 import { Auction } from "src/Auction.sol";
 import { Harberger } from "src/Harberger.sol";
 import { SBT } from "src/SBT.sol";
+import { MockUsdc } from "test/mocks/MockUsdc.sol";
 import "src/utils/Errors.sol";
 
 contract AuctionTest is Test {
@@ -22,14 +23,25 @@ contract AuctionTest is Test {
     Harberger harberger;
     SBT sbt;
 
+    MockUsdc USDC;
+    uint256 constant HUNDRED_USDC = 100_000_000; // 10 USDC in 6 decimals
+    uint256 constant TEN_USDC = 10_000_000; // 10 USDC in 6 decimals
+    uint256 constant TWENTY_USDC = 20_000_000;
+    uint256 constant ONE_USDC = 1_000_000;
+    uint256 constant ONE_TENTH_USDC = 100_000; // 1/10 of USDC for Tax Rate
+
     address auctioner;
 
     function setUp() external {
         Deploy deploy = new Deploy();
-        (address _auction, address _harberger, address _sbt, Deploy.Config memory config) = deploy.deploy();
+        (address _auction, address _harberger, address _sbt,, address _USDC, Deploy.Config memory config) =
+            deploy.deploy();
         auction = Auction(_auction);
         harberger = Harberger(_harberger);
         sbt = SBT(_sbt);
+
+        USDC = MockUsdc(_USDC);
+
         auctioner = config.auctioner;
     }
 
@@ -50,7 +62,8 @@ contract AuctionTest is Test {
 
     function test_Auction_RevertIfNotAsset() external {
         vm.expectRevert(Auction_NotAsset.selector);
-        auction.bid(address(sbt), 1, 1 ether);
+        auction.bid(address(sbt), 1, TEN_USDC, TWENTY_USDC); // Auction bid is 10 USDC and initial Value to set is 20
+            // USDC
     }
 
     modifier setAsset() {
@@ -59,8 +72,19 @@ contract AuctionTest is Test {
         _;
     }
 
+    modifier startAuctionAndValidity(uint256 _tokenId, uint256 _auctionDuration, uint256 _assetValidityDuration) {
+        hoax(auctioner, 10 ether);
+        auction.startAuctionAndValidity(address(sbt), _tokenId, _auctionDuration, _assetValidityDuration);
+        _;
+    }
+
     function test_Auction_RevertIfInvalidTime() external setAsset {
         vm.expectRevert(Auction_TimeNotValid.selector);
-        auction.bid(address(sbt), 1, 2);
+        auction.bid(address(sbt), 1, TEN_USDC, TWENTY_USDC); // Auction bid is 10 USDC and initial Value to set is 20
+            // USDC
     }
+
+    // function test_Auction_()  returns () {
+
+    // }
 }

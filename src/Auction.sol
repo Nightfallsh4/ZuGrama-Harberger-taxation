@@ -18,6 +18,7 @@ contract Auction {
         address currentBidder;
         uint256 currentBid;
         uint256 currentTotalTax;
+        uint256 currentInitialValue;
         uint256 minBid;
     }
 
@@ -44,7 +45,7 @@ contract Auction {
     //////// External ////////////
     //////////////////////////////
 
-    function bid(address _asset, uint256 _assetId, uint256 _bidAmount) external {
+    function bid(address _asset, uint256 _assetId, uint256 _bidAmount, uint256 _initialValue) external {
         AssetDetails memory assetDetails = assets[_asset][_assetId];
         checkAssetBidStatus(assetDetails);
 
@@ -60,11 +61,12 @@ contract Auction {
         uint256 previousAmount = assetDetails.currentBid;
         uint256 previousTax = assetDetails.currentTotalTax;
 
-        uint256 tax = Harberger(harberger).getTotalTaxForValue(_bidAmount);
+        uint256 tax = Harberger(harberger).getTotalTaxForValue(_initialValue);
 
         assetDetails.currentBid = _bidAmount;
         assetDetails.currentBidder = msg.sender;
         assetDetails.currentTotalTax = tax;
+        assetDetails.currentInitialValue = _initialValue;
         assets[_asset][_assetId] = assetDetails;
 
         // @follow-up have to make it calculate the tax and get the entire amount
@@ -80,7 +82,7 @@ contract Auction {
         emit Auction_NewBid(msg.sender, _bidAmount);
     }
 
-    function claim(address _asset, uint256 _assetId, uint256 _initialValue, address _bidder) external {
+    function claim(address _asset, uint256 _assetId, address _bidder) external {
         // @follow-up can we just have the initial bid as initialValue
         AssetDetails memory assetDetails = assets[_asset][_assetId];
         checkAssetClaimStatus(assetDetails, _bidder);
@@ -95,7 +97,7 @@ contract Auction {
             assetDetails.validTill,
             _bidder,
             assetDetails.currentBid,
-            _initialValue
+            assetDetails.currentInitialValue
         );
     }
 
@@ -112,6 +114,7 @@ contract Auction {
             currentBidder: address(0),
             currentBid: 0,
             currentTotalTax: 0,
+            currentInitialValue: 0,
             minBid: _minBid
         });
         emit Auction_AssetSet(_assetAddress, _assetId, _minBid);

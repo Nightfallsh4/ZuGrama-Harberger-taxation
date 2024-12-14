@@ -12,7 +12,7 @@ contract SBTFactory {
     }
 
     /**
-     * @dev Used to create a Harberger SBT Asset 
+     * @dev Used to create a Harberger SBT Asset
      * @param _name Name of the asset
      * @param _symbol Symbol of the asset
      * @param _initialOwner Initial Owner of the asset

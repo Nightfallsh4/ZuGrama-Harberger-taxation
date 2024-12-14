@@ -15,7 +15,7 @@ contract SBTTest is Test {
 
     function setUp() external {
         Deploy deploy = new Deploy();
-        (address _auction, address _harberger, address _sbt,) = deploy.deploy();
+        (address _auction, address _harberger, address _sbt,,,) = deploy.deploy();
         auction = Auction(_auction);
         harberger = Harberger(_harberger);
         sbt = SBT(_sbt);

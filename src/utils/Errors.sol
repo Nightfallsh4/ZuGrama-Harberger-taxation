@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
+// Script Errors
+error Deploy_UnSupportedChain();
+
 // SBT Errors
 error SBT_Function_Disabled();
 error SBT_Only_Harberger();
