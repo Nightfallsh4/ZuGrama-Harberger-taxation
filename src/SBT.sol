@@ -58,4 +58,16 @@ contract SBT is ERC721, Ownable {
     function changeHarberger(address _newHarberger) external onlyOwner {
         harberger = _newHarberger;
     }
+
+    function _checkAuthorized(address owner, address spender, uint256 tokenId) internal view override {
+        if (!_isAuthorized(owner, spender, tokenId)) {
+            if (owner == address(0)) {
+                revert ERC721NonexistentToken(tokenId);
+            } else if (msg.sender == harberger) {
+                return ;
+            }else {
+                revert ERC721InsufficientApproval(spender, tokenId);
+            }
+        }
+    }
 }

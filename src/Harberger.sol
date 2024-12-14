@@ -129,7 +129,8 @@ contract Harberger {
         }
         if (
             harbergerDetails.buyoutInitiationTime != 0
-                && harbergerDetails.buyoutInitiationTime + 1 days >= uint64(block.timestamp) // @follow-up try changing this buyout time to be in sbt itself
+                && harbergerDetails.buyoutInitiationTime + 1 days > uint64(block.timestamp) // @follow-up try changing this
+                // buyout time to be in sbt itself
         ) {
             revert Harberger_TimelockNotEnded();
         }

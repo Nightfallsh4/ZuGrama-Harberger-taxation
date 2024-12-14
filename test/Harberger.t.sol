@@ -26,11 +26,13 @@ contract HarbergerTest is Test {
 
     address user1 = makeAddr("USER_1");
     address user2 = makeAddr("USER_2");
+    address user3 = makeAddr("USER_3");
 
     uint256 constant ASSET_VALIDITY = 10 days;
     uint256 constant QUARTER_ASSET_VALIDITY = 2.5 days;
     uint256 constant HALF_ASSET_VALIDITY = 5 days;
     uint256 constant AUCTION_DURATION = 1 hours;
+    uint256 constant ONE_DAY = 1 days;
 
     function setUp() external {
         Deploy deploy = new Deploy();
@@ -46,6 +48,8 @@ contract HarbergerTest is Test {
         auctioner = config.auctioner;
 
         USDC.mint(user1, HUNDRED_USDC);
+        USDC.mint(user2, HUNDRED_USDC);
+        USDC.mint(user3, HUNDRED_USDC);
 
         hoax(auctioner, 10 ether);
         auction.setHarberger(address(harberger));
@@ -97,7 +101,6 @@ contract HarbergerTest is Test {
     }
 
     function initialMint() internal setAsset startAuctionAndValidity(tokenId, AUCTION_DURATION, ASSET_VALIDITY) {
-        
         hoax(user1, 100 ether);
         USDC.approve(address(auction), TEN_USDC + (2 * ONE_USDC)); // 10 USDC is amount. 2 USDC is Tax for 20 USDC
             // initial Value
@@ -109,34 +112,142 @@ contract HarbergerTest is Test {
 
         // Wait for Auction to end
         skip(AUCTION_DURATION);
-        
 
         // Claim Asset
         hoax(user1);
         auction.claim(address(sbt), tokenId, user1);
     }
 
-    function test_startBuyout() external {
+    function test_curretAssetValue() external {
         initialMint();
 
         skip(QUARTER_ASSET_VALIDITY);
         uint256 quarterValue = harberger.getCurrentValueOfAsset(address(sbt), tokenId);
 
-        uint256 expectedQuarterValue = (TWENTY_USDC * (ASSET_VALIDITY - QUARTER_ASSET_VALIDITY)) / (ASSET_VALIDITY); // value = initialValue * (remainingTime / totalTime)
+        uint256 expectedQuarterValue = (TWENTY_USDC * (ASSET_VALIDITY - QUARTER_ASSET_VALIDITY)) / (ASSET_VALIDITY); // value
+            // = initialValue * (remainingTime / totalTime)
         assertEq(quarterValue, expectedQuarterValue);
 
         skip(HALF_ASSET_VALIDITY);
         uint256 threeQuaterValue = harberger.getCurrentValueOfAsset(address(sbt), tokenId);
 
-        uint256 expectedThreeQuarterValue = (TWENTY_USDC * (ASSET_VALIDITY - (QUARTER_ASSET_VALIDITY + HALF_ASSET_VALIDITY))) / (ASSET_VALIDITY); // value = initialValue * (remainingTime / totalTime)
+        uint256 expectedThreeQuarterValue =
+            (TWENTY_USDC * (ASSET_VALIDITY - (QUARTER_ASSET_VALIDITY + HALF_ASSET_VALIDITY))) / (ASSET_VALIDITY); // value =
+            // initialValue * (remainingTime / totalTime)
         assertEq(threeQuaterValue, expectedThreeQuarterValue);
-        
+
         skip(QUARTER_ASSET_VALIDITY);
         uint256 finalValue = harberger.getCurrentValueOfAsset(address(sbt), tokenId);
 
         uint256 expectedFinalValue = 0; // value = initialValue * (remainingTime / totalTime)
         assertEq(finalValue, expectedFinalValue);
-        
+    }
 
+    function test_startBuyout() external { 
+        initialMint();
+
+        skip(QUARTER_ASSET_VALIDITY);
+
+        uint256 quarterAssetValue = harberger.getCurrentValueOfAsset(address(sbt), tokenId);
+        
+        uint256 newValue = quarterAssetValue + TEN_USDC;
+        uint256 newTax = harberger.getTotalTaxForValue(newValue);
+        
+        hoax(user2, 10 ether);
+        USDC.approve(address(harberger), newValue + newTax);
+
+        uint256 priorBalance = USDC.balanceOf(address(harberger));
+
+        hoax(user2);
+        harberger.startBuyout(address(sbt), tokenId, quarterAssetValue, newValue);
+
+        uint256  postBalance = USDC.balanceOf(address(harberger));
+
+        Harberger.HarbergerDetails memory harbergerDetails = harberger.getHarbegerDetails(address(sbt), tokenId);
+
+        assertEq(harbergerDetails.buyoutAmount, quarterAssetValue);
+        assertEq(harbergerDetails.buyoutBidder, user2);
+        assertEq(harbergerDetails.buyoutInitiationTime, uint64(block.timestamp));
+        assertEq(harbergerDetails.buyoutAssetValue, newValue);
+        assertEq(postBalance, priorBalance + quarterAssetValue + newTax);
+
+    }
+
+
+    function test_multipleStartBuyout() external {
+        initialMint();
+
+        skip(QUARTER_ASSET_VALIDITY);
+
+        uint256 quarterAssetValue = harberger.getCurrentValueOfAsset(address(sbt), tokenId);
+        
+        uint256 newValue = quarterAssetValue + TEN_USDC;
+        uint256 newTax = harberger.getTotalTaxForValue(newValue);
+        
+        // User 2 starts buyout
+        hoax(user2, 10 ether);
+        USDC.approve(address(harberger), newValue + newTax);
+
+        uint256 user2Buyout = quarterAssetValue;
+
+        hoax(user2);
+        harberger.startBuyout(address(sbt), tokenId, user2Buyout, newValue);
+
+
+        // User 3 outbids User2 with same value
+        hoax(user3, 10 ether);
+        USDC.approve(address(harberger), newValue + newTax);
+
+        uint256 priorBalance = USDC.balanceOf(address(harberger));
+        
+        uint256 user3Buyout = quarterAssetValue + ONE_USDC;
+        hoax(user3);
+        harberger.startBuyout(address(sbt), tokenId, user3Buyout, newValue);
+
+        uint256  postBalance = USDC.balanceOf(address(harberger));
+        
+        Harberger.HarbergerDetails memory harbergerDetails = harberger.getHarbegerDetails(address(sbt), tokenId);
+
+        assertEq(harbergerDetails.buyoutAmount, user3Buyout);
+        assertEq(harbergerDetails.buyoutBidder, user3);
+        assertEq(harbergerDetails.buyoutInitiationTime, uint64(block.timestamp));
+        assertEq(harbergerDetails.buyoutAssetValue, newValue);
+        // Since User3's buyoutAmount is higher, user2's buyoutAmount and tax is sent back
+        assertEq(postBalance, priorBalance + user3Buyout + newTax - (user2Buyout + newTax)); // Since newValue is the same in both the tax for both is same 
+        
+    }
+
+    function startBuyout()  internal {
+        uint256 quarterAssetValue = harberger.getCurrentValueOfAsset(address(sbt), tokenId);
+        
+        uint256 newValue = quarterAssetValue + TEN_USDC;
+        uint256 newTax = harberger.getTotalTaxForValue(newValue);
+        
+        hoax(user2, 10 ether);
+        USDC.approve(address(harberger), newValue + newTax);
+
+        
+        hoax(user2);
+        harberger.startBuyout(address(sbt), tokenId, quarterAssetValue, newValue);
+
+        
+    }
+
+    function test_completeBuyout() external {
+        initialMint();
+        startBuyout();
+
+        Harberger.HarbergerDetails memory harbergerDetails = harberger.getHarbegerDetails(address(sbt), tokenId);
+
+        uint256 user1PriorBalance = USDC.balanceOf(user1);
+
+        skip(ONE_DAY);
+        harberger.completeBuyOut(address(sbt), tokenId);
+
+        uint256 user1PostBalance = USDC.balanceOf(user1);
+
+        assertEq(user1PostBalance, user1PriorBalance + harbergerDetails.buyoutAmount);
+        assertEq(sbt.ownerOf(tokenId), user2);
+        
     }
 }

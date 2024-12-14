@@ -135,7 +135,7 @@ contract Auction {
         }
         assets[_assetAddress][_assetId].auctionStartTime = uint64(block.timestamp); // timestamp wont exceed uint64
         assets[_assetAddress][_assetId].auctionEndTime = uint64(block.timestamp + _auctionDuration);
-        assets[_assetAddress][_assetId].validTill = uint64(block.timestamp +  _auctionDuration + _assetDuration);
+        assets[_assetAddress][_assetId].validTill = uint64(block.timestamp + _auctionDuration + _assetDuration);
 
         emit Auction_Started(_assetAddress, _assetId, block.timestamp + _auctionDuration);
     }
